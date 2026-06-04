@@ -1,0 +1,163 @@
+/* PTZControls 樣式 */
+
+.ptz-controls {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ptz-controls--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ptz-controls__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+/* D-Pad 十字方向控制 */
+.ptz-controls__dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(3, 48px);
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+}
+
+.ptz-controls__btn {
+  width: 48px;
+  height: 48px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  user-select: none;
+}
+
+.ptz-controls__btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.ptz-controls__btn:active:not(:disabled) {
+  background: rgba(0, 212, 255, 0.3);
+  transform: scale(0.95);
+}
+
+.ptz-controls__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* D-pad 位置配置 */
+.ptz-controls__btn--up { grid-column: 2; grid-row: 1; }
+.ptz-controls__btn--left { grid-column: 1; grid-row: 2; }
+.ptz-controls__btn--center { grid-column: 2; grid-row: 2; }
+.ptz-controls__btn--right { grid-column: 3; grid-row: 2; }
+.ptz-controls__btn--down { grid-column: 2; grid-row: 3; }
+
+/* 中央 Home 按鈕特殊樣式 */
+.ptz-controls__btn--center {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.3);
+  font-size: 1.2rem;
+}
+
+/* 變焦控制 */
+.ptz-controls__zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ptz-controls__label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ptz-controls__zoom-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ptz-controls__zoom-slider {
+  flex: 1;
+  height: 4px;
+}
+
+.ptz-controls__zoom-label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  user-select: none;
+  width: 20px;
+  text-align: center;
+}
+
+/* 速度控制 */
+.ptz-controls__speed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ptz-controls__speed-value {
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.ptz-controls__speed-slider {
+  width: 100%;
+}
+
+/* 預設位置按鈕 */
+.ptz-controls__presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.ptz-controls__preset-btn {
+  padding: 8px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ptz-controls__preset-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.ptz-controls__preset-btn:active:not(:disabled) {
+  background: rgba(0, 212, 255, 0.25);
+}

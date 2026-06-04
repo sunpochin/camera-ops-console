@@ -1,0 +1,150 @@
+/* PerformanceMonitor 樣式 */
+
+.performance-monitor {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  transition: all var(--transition-normal);
+}
+
+.performance-monitor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  user-select: none;
+}
+
+.performance-monitor__header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.performance-monitor__title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.performance-monitor__pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+  animation: pulse-cyan 2s infinite;
+}
+
+@keyframes pulse-cyan {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.performance-monitor__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.performance-monitor__toggle-icon {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.performance-monitor__body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 網格折線圖容器 */
+.performance-monitor__chart-container {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.performance-monitor__canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 折線圖限值文字 */
+.performance-monitor__chart-limit {
+  position: absolute;
+  font-size: 9px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.performance-monitor__chart-limit--top {
+  top: 4px;
+  right: 6px;
+}
+
+.performance-monitor__chart-limit--bottom {
+  bottom: 4px;
+  right: 6px;
+}
+
+/* 指標列表 */
+.performance-monitor__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.performance-monitor__stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.performance-monitor__stat-label {
+  color: var(--text-muted);
+}
+
+.performance-monitor__stat-value {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* 狀態顏色值 */
+.fps-good {
+  color: var(--accent-green);
+}
+
+.fps-warning {
+  color: var(--accent-amber);
+}
+
+.fps-bad {
+  color: var(--accent-red);
+}
+
+.long-tasks-warn {
+  color: var(--accent-red);
+  text-shadow: 0 0 4px rgba(255, 68, 68, 0.4);
+}
+
+/* 折疊樣式微調 */
+.performance-monitor--collapsed {
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+}

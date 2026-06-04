@@ -1,0 +1,27 @@
+{
+  "name": "camera-ops-console",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "多攝影機即時監控操作台 — Multi-Camera Operations Console with WebRTC, Canvas processing, and real-time controls",
+  "scripts": {
+    "dev": "vite",
+    "server": "node --env-file=.env server/index.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.3",
+    "express": "^5.2.1",
+    "i18next": "^26.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.8",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^8.0.12"
+  }
+}

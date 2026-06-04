@@ -1,0 +1,10 @@
+/* App 全域樣式 */
+
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--bg-primary);
+}

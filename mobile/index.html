@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Camera Ops — 行動串流</title>
+  <style>
+    /* ── 全域樣式 ── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-glass: rgba(17, 24, 39, 0.7);
+      --accent: #00d4ff;
+      --accent-dim: rgba(0, 212, 255, 0.15);
+      --text-primary: #e5e7eb;
+      --text-secondary: #9ca3af;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 頂部狀態列 ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      z-index: 10;
+    }
+
+    .status-bar .title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .status-bar .title span {
+      color: var(--accent);
+    }
+
+    .connection-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--accent-dim);
+      color: var(--accent);
+      transition: all 0.3s ease;
+    }
+
+    .connection-badge.connected {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+    }
+
+    .connection-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+    }
+
+    .connection-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── 影像預覽區 ── */
+    .video-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #localVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* 影像上層的串流統計資訊 */
+    .stream-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 6px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-secondary);
+      width: fit-content;
+    }
+
+    .stat-pill .label {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* 錄影指示燈 */
+    .rec-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--danger);
+      letter-spacing: 1px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .rec-indicator.active {
+      opacity: 1;
+    }
+
+    .rec-indicator .rec-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: pulse 1s infinite;
+    }
+
+    /* ── 底部控制面板 ── */
+    .controls-panel {
+      padding: 16px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .controls-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 72px;
+      height: 72px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn .icon {
+      font-size: 24px;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--bg-primary);
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .btn.primary:active {
+      background: #00b8d9;
+    }
+
+    .btn.danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn.danger:active {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* ── 提示訊息 ── */
+    .placeholder-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .placeholder-msg .icon {
+      font-size: 48px;
+      opacity: 0.5;
+    }
+
+    /* ── Log 訊息區 ── */
+    .log-area {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      max-height: 100px;
+      overflow-y: auto;
+      pointer-events: none;
+    }
+
+    .log-line {
+      font-size: 10px;
+      font-family: 'SF Mono', Menlo, monospace;
+      color: rgba(0, 212, 255, 0.6);
+      padding: 1px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 頂部狀態列 -->
+  <div class="status-bar">
+    <div class="title">Camera <span>Ops</span></div>
+    <div id="connectionBadge" class="connection-badge disconnected">
+      <div class="dot"></div>
+      <span id="connectionText">未連線</span>
+    </div>
+  </div>
+
+  <!-- 影像預覽 -->
+  <div class="video-container">
+    <video id="localVideo" autoplay playsinline muted></video>
+
+    <div id="placeholder" class="placeholder-msg">
+      <div class="icon">📷</div>
+      <div>點擊「開始串流」啟動鏡頭</div>
+    </div>
+
+    <!-- 串流統計 -->
+    <div class="stream-overlay">
+      <div class="stat-pill"><span class="label">RES</span> <span id="statRes">—</span></div>
+      <div class="stat-pill"><span class="label">FPS</span> <span id="statFps">—</span></div>
+      <div class="stat-pill"><span class="label">BPS</span> <span id="statBps">—</span></div>
+    </div>
+
+    <!-- 錄影指示燈 -->
+    <div id="recIndicator" class="rec-indicator">
+      <div class="rec-dot"></div>
+      LIVE
+    </div>
+
+    <!-- Log 區 -->
+    <div id="logArea" class="log-area"></div>
+  </div>
+
+  <!-- 底部控制面板 -->
+  <div class="controls-panel">
+    <div class="controls-row">
+      <button id="btnStart" class="btn primary" onclick="startStreaming()">
+        <div class="icon">📡</div>
+        開始串流
+      </button>
+      <button id="btnStop" class="btn danger" onclick="stopStreaming()" disabled>
+        <div class="icon">⏹️</div>
+        停止串流
+      </button>
+      <button id="btnSwitch" class="btn" onclick="switchCamera()" disabled>
+        <div class="icon">🔄</div>
+        切換鏡頭
+      </button>
+      <button id="btnReconnect" class="btn" onclick="reconnect()">
+        <div class="icon">🔌</div>
+        重新連線
+      </button>
+    </div>
+  </div>
+
+<script>
+// ── 全域狀態 ───────────────────────────────────────
+let ws = null;               // WebSocket 連線
+let pc = null;               // RTCPeerConnection
+let localStream = null;      // 本機媒體串流
+let statsTimer = null;       // 統計更新計時器
+let facingMode = 'environment'; // 預設後鏡頭
+let prevBytesSent = 0;       // 計算位元率用
+let prevTimestamp = 0;
+
+// ICE 伺服器設定
+const iceConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ],
+};
+
+// 信令伺服器位址（自動偵測主機名稱）
+const signalingUrl = `ws://${location.hostname}:3005`;
+
+// DOM 元素參照
+const videoEl = document.getElementById('localVideo');
+const placeholderEl = document.getElementById('placeholder');
+const connectionBadge = document.getElementById('connectionBadge');
+const connectionText = document.getElementById('connectionText');
+const recIndicator = document.getElementById('recIndicator');
+const btnStart = document.getElementById('btnStart');
+const btnStop = document.getElementById('btnStop');
+const btnSwitch = document.getElementById('btnSwitch');
+
+// ── 日誌工具 ───────────────────────────────────────
+function log(msg) {
+  console.log(`[Camera] ${msg}`);
+  const area = document.getElementById('logArea');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.textContent = `${new Date().toLocaleTimeString()} ${msg}`;
+  area.appendChild(line);
+  // 限制行數
+  while (area.children.length > 20) {
+    area.removeChild(area.firstChild);
+  }
+  area.scrollTop = area.scrollHeight;
+}
+
+// ── 連線狀態更新 ──────────────────────────────────────
+function setConnectionStatus(status) {
+  connectionBadge.className = `connection-badge ${status}`;
+  const labels = {
+    connecting: '連線中…',
+    connected: '已連線',
+    disconnected: '未連線',
+  };
+  connectionText.textContent = labels[status] || status;
+}
+
+// ── WebSocket 連線 ──────────────────────────────────
+function connectSignaling() {
+  if (ws && ws.readyState <= 1) return; // 已連線或正在連線
+
+  setConnectionStatus('connecting');
+  log('正在連線信令伺服器…');
+
+  ws = new WebSocket(signalingUrl);
+
+  ws.onopen = () => {
+    setConnectionStatus('connected');
+    log('信令伺服器已連線');
+  };
+
+  ws.onmessage = (event) => {
+    let msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    handleSignalingMessage(msg);
+  };
+
+  ws.onclose = () => {
+    setConnectionStatus('disconnected');
+    log('信令伺服器已斷線');
+    // 5 秒後自動重連
+    setTimeout(connectSignaling, 5000);
+  };
+
+  ws.onerror = (err) => {
+    log('信令連線錯誤');
+    console.error(err);
+  };
+}
+
+// ── 信令訊息處理 ──────────────────────────────────────
+async function handleSignalingMessage(msg) {
+  switch (msg.type) {
+    case 'welcome':
+      log('收到伺服器歡迎訊息');
+      break;
+
+    case 'room_joined':
+      log(`已加入房間 ${msg.roomId}，ID: ${msg.peerId}`);
+      // 若房間已有其他 peer，主動發起 offer
+      if (msg.peers && msg.peers.length > 0) {
+        log(`房間內有 ${msg.peers.length} 個 peer，發起 offer`);
+        await createOffer();
+      }
+      break;
+
+    case 'peer_joined':
+      log(`新 peer 加入: ${msg.peerId}`);
+      // 有新 peer 加入時發起 offer
+      await createOffer();
+      break;
+
+    case 'peer_left':
+      log(`peer 離開: ${msg.peerId}`);
+      break;
+
+    case 'offer':
+      log('收到 offer');
+      await handleOffer(msg);
+      break;
+
+    case 'answer':
+      log('收到 answer');
+      await handleAnswer(msg);
+      break;
+
+    case 'ice_candidate':
+      await handleRemoteIceCandidate(msg);
+      break;
+
+    default:
+      break;
+  }
+}
+
+// ── 開始串流 ───────────────────────────────────────
+async function startStreaming() {
+  try {
+    btnStart.disabled = true;
+    log('正在啟動鏡頭…');
+
+    // 取得本機媒體串流
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode,
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 },
+      },
+      audio: false,
+    });
+
+    videoEl.srcObject = localStream;
+    placeholderEl.style.display = 'none';
+    log('鏡頭已啟動');
+
+    // 確保信令已連線
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      connectSignaling();
+      // 等待連線
+      await new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 200);
+        // 逾時 5 秒
+        setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+      });
+    }
+
+    // 建立 PeerConnection
+    setupPeerConnection();
+
+    // 加入串流房間
+    sendSignaling({
+      type: 'join_room',
+      roomId: 'camera-stream',
+    });
+
+    btnStop.disabled = false;
+    btnSwitch.disabled = false;
+    recIndicator.classList.add('active');
+
+    // 開始統計更新
+    startStatsMonitor();
+
+  } catch (err) {
+    log(`鏡頭啟動失敗: ${err.message}`);
+    btnStart.disabled = false;
+    console.error(err);
+  }
+}
+
+// ── 停止串流 ───────────────────────────────────────
+function stopStreaming() {
+  log('正在停止串流…');
+
+  // 離開房間
+  sendSignaling({ type: 'leave_room' });
+
+  // 關閉 PeerConnection
+  if (pc) {
+    pc.close();
+    pc = null;
+  }
+
+  // 停止本機串流
+  if (localStream) {
+    localStream.getTracks().forEach((t) => t.stop());
+    localStream = null;
+  }
+
+  videoEl.srcObject = null;
+  placeholderEl.style.display = '';
+  recIndicator.classList.remove('active');
+
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+  btnSwitch.disabled = true;
+
+  // 停止統計
+  if (statsTimer) {
+    clearInterval(statsTimer);
+    statsTimer = null;
+  }
+
+  // 重設統計顯示
+  document.getElementById('statRes').textContent = '—';
+  document.getElementById('statFps').textContent = '—';
+  document.getElementById('statBps').textContent = '—';
+
+  log('串流已停止');
+}
+
+// ── 切換鏡頭 ───────────────────────────────────────
+async function switchCamera() {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  log(`切換至${facingMode === 'environment' ? '後' : '前'}鏡頭`);
+
+  if (localStream) {
+    // 停止目前的影像軌道
+    localStream.getVideoTracks().forEach((t) => t.stop());
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
+        audio: false,
+      });
+
+      const newTrack = newStream.getVideoTracks()[0];
+
+      // 替換 PeerConnection 中的軌道
+      if (pc) {
+        const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(newTrack);
+        }
+      }
+
+      // 更新本機預覽
+      localStream = newStream;
+      videoEl.srcObject = localStream;
+      log('鏡頭切換完成');
+
+    } catch (err) {
+      log(`切換鏡頭失敗: ${err.message}`);
+    }
+  }
+}
+
+// ── 重新連線 ───────────────────────────────────────
+function reconnect() {
+  log('正在重新連線…');
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  if (pc) {
+    pc.close();
+    pc = null;
+  }
+  connectSignaling();
+}
+
+// ── RTCPeerConnection 設定 ──────────────────────────
+function setupPeerConnection() {
+  if (pc) {
+    pc.close();
+  }
+
+  pc = new RTCPeerConnection(iceConfig);
+
+  // 將本機串流軌道加入
+  if (localStream) {
+    localStream.getTracks().forEach((track) => {
+      pc.addTrack(track, localStream);
+    });
+  }
+
+  // ICE candidate 產生時傳送給對方
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      sendSignaling({
+        type: 'ice_candidate',
+        candidate: event.candidate,
+      });
+    }
+  };
+
+  // 連線狀態變化
+  pc.onconnectionstatechange = () => {
+    log(`PeerConnection 狀態: ${pc.connectionState}`);
+    if (pc.connectionState === 'connected') {
+      recIndicator.classList.add('active');
+    }
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      recIndicator.classList.remove('active');
+    }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    log(`ICE 狀態: ${pc.iceConnectionState}`);
+  };
+
+  log('PeerConnection 已建立');
+}
+
+// ── 建立 Offer ─────────────────────────────────────
+async function createOffer() {
+  if (!pc) return;
+
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    sendSignaling({
+      type: 'offer',
+      sdp: pc.localDescription,
+    });
+
+    log('已傳送 offer');
+  } catch (err) {
+    log(`建立 offer 失敗: ${err.message}`);
+  }
+}
+
+// ── 處理遠端 Offer ──────────────────────────────────
+async function handleOffer(msg) {
+  if (!pc) setupPeerConnection();
+
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    sendSignaling({
+      type: 'answer',
+      sdp: pc.localDescription,
+    });
+
+    log('已回覆 answer');
+  } catch (err) {
+    log(`處理 offer 失敗: ${err.message}`);
+  }
+}
+
+// ── 處理遠端 Answer ─────────────────────────────────
+async function handleAnswer(msg) {
+  if (!pc) return;
+
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+    log('已設定遠端 answer');
+  } catch (err) {
+    log(`處理 answer 失敗: ${err.message}`);
+  }
+}
+
+// ── 處理遠端 ICE Candidate ──────────────────────────
+async function handleRemoteIceCandidate(msg) {
+  if (!pc) return;
+
+  try {
+    if (msg.candidate) {
+      await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+    }
+  } catch (err) {
+    log(`加入 ICE candidate 失敗: ${err.message}`);
+  }
+}
+
+// ── 傳送信令訊息 ──────────────────────────────────────
+function sendSignaling(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  } else {
+    log('信令未連線，無法傳送訊息');
+  }
+}
+
+// ── 串流統計監控 ──────────────────────────────────────
+function startStatsMonitor() {
+  if (statsTimer) clearInterval(statsTimer);
+
+  statsTimer = setInterval(async () => {
+    // 從影像軌道取得解析度
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        if (settings.width && settings.height) {
+          document.getElementById('statRes').textContent =
+            `${settings.width}×${settings.height}`;
+        }
+        if (settings.frameRate) {
+          document.getElementById('statFps').textContent =
+            `${Math.round(settings.frameRate)}`;
+        }
+      }
+    }
+
+    // 從 PeerConnection 取得位元率
+    if (pc) {
+      try {
+        const stats = await pc.getStats();
+        stats.forEach((report) => {
+          if (report.type === 'outbound-rtp' && report.kind === 'video') {
+            const now = report.timestamp;
+            const bytes = report.bytesSent;
+            if (prevTimestamp > 0) {
+              const elapsed = (now - prevTimestamp) / 1000;
+              const bitrate = ((bytes - prevBytesSent) * 8) / elapsed;
+              document.getElementById('statBps').textContent = formatBitrate(bitrate);
+            }
+            prevBytesSent = bytes;
+            prevTimestamp = now;
+          }
+        });
+      } catch {
+        // 統計取得失敗，靜默處理
+      }
+    }
+  }, 1000);
+}
+
+// ── 位元率格式化 ──────────────────────────────────────
+function formatBitrate(bps) {
+  if (bps >= 1000000) {
+    return `${(bps / 1000000).toFixed(1)} Mbps`;
+  }
+  if (bps >= 1000) {
+    return `${(bps / 1000).toFixed(0)} Kbps`;
+  }
+  return `${Math.round(bps)} bps`;
+}
+
+// ── 頁面初始化 ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  log('行動串流頁面已載入');
+  connectSignaling();
+});
+
+// 頁面關閉時清理
+window.addEventListener('beforeunload', () => {
+  stopStreaming();
+  if (ws) ws.close();
+});
+</script>
+</body>
+</html>
