@@ -382,20 +382,25 @@ server.listen(PORT, () => {
 });
 
 // 優雅關閉
-process.on('SIGTERM', () => {
-  console.log('[伺服器] 收到 SIGTERM，正在關閉...');
-  wss.close();
-  server.close(() => {
-    console.log('[伺服器] 已關閉');
+const gracefulShutdown = (signal) => {
+  console.log(`[伺服器] 收到 ${signal}，正在關閉...`);
+  
+  // 設定 500ms 安全時間，時間到不管連線是否斷開都強制退出，避免 Ctrl+C 塞車
+  setTimeout(() => {
+    console.log('[伺服器] 已強制關閉');
     process.exit(0);
-  });
-});
+  }, 500);
 
-process.on('SIGINT', () => {
-  console.log('[伺服器] 收到 SIGINT，正在關閉...');
-  wss.close();
-  server.close(() => {
-    console.log('[伺服器] 已關閉');
-    process.exit(0);
-  });
-});
+  try {
+    wss.close();
+    server.close(() => {
+      console.log('[伺服器] 已優雅關閉');
+      process.exit(0);
+    });
+  } catch (err) {
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

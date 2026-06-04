@@ -4,11 +4,10 @@ import useWebSocket from '../hooks/useWebSocket';
 // 建立裝置與警報的 React Context
 const DeviceContext = createContext(null);
 
-// 後端伺服器位址動態偵測 (配合 Mac Mini 區域網路部署)
-const BACKEND_PORT = process.env.BACKEND_PORT || 3001;
-const BACKEND_HOST = `${window.location.hostname}:${BACKEND_PORT}`;
-const API_URL = `http://${BACKEND_HOST}/api`;
-const WS_URL = `ws://${BACKEND_HOST}`;
+// 使用相對路徑與 Vite Proxy 代理，支援單一 ngrok 隧道
+const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const API_URL = '/api';
+const WS_URL = `${wsProto}//${window.location.host}/ws`;
 
 // 初始狀態
 const initialState = {

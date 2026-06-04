@@ -365,8 +365,9 @@ const iceConfig = {
   ],
 };
 
-// 信令伺服器位址（自動偵測主機名稱）
-const signalingUrl = `ws://${location.hostname}:3005`;
+// 信令伺服器位址（自動偵測協議與主機名稱，支援 ngrok 隧道）
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const signalingUrl = `${wsProto}//${location.host}/ws`;
 
 // DOM 元素參照
 const videoEl = document.getElementById('localVideo');
