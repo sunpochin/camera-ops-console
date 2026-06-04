@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       open: true,
-      allowedHosts: 'all',
+      allowedHosts: true,
       proxy: {
         // 代理 REST API 請求
         '/api': {
