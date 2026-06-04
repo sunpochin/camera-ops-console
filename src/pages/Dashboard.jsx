@@ -57,11 +57,26 @@ export default function Dashboard() {
   // ── 串流取得 ────────────────────────────────────────
 
   // 1. 本地 USB 攝影機 (Logitech VID:1133 PID:2075)
-  const { stream: usbStream } = useCamera();
+  // 【技術說明】：利用 useCamera 取得本機所有相機裝置，並自動過濾出實體 USB 鏡頭以避免 macOS 接續互通相機 (Continuity Camera) 搶佔預設鏡頭。
+  // 【生活比喻】：跟電腦要一張相機名單，然後專門挑出寫著 Logitech 或 USB 的相機，不要讓手機相機搗亂！
+  const { stream: usbStream, devices: localCameraDevices, switchCamera: switchLocalCamera } = useCamera();
+
+  // 自動過濾並選取 Logitech/USB 鏡頭
+  useEffect(() => {
+    if (localCameraDevices && localCameraDevices.length > 0) {
+      const targetDev = localCameraDevices.find((d) => {
+        const label = d.label.toLowerCase();
+        return label.includes('logitech') || label.includes('usb') || label.includes('uvc');
+      });
+      if (targetDev) {
+        switchLocalCamera(targetDev.deviceId);
+      }
+    }
+  }, [localCameraDevices, switchLocalCamera]);
 
   // 2. 遠端 iPhone 攝影機 (WebRTC)
   // 信令伺服器位址
-  const rtcSignalingUrl = useMemo(() => `ws://${window.location.hostname}:3005`, []);
+  const rtcSignalingUrl = useMemo(() => `ws://${window.location.hostname}:3001`, []);
   const { stream: rtcStream, stats: rtcStats } = useWebRTC(ws, 'camera-stream');
 
   // 3. 系統效能診斷
